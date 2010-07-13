@@ -114,9 +114,9 @@ module Git
       remote_revision = self.get_remote_revision
 
       if @options['revision'] == remote_revision
-        if settings['ignore_if_same_revision']
+        if @options['ignore_if_same_revision']
           puts "Same revision, ignoring"
-          next
+          return
         end
 
         puts "Same revision, overwriting"
