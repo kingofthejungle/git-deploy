@@ -130,7 +130,7 @@ module Git
       length = @options['length']
       @remote_files.each do |local_file, modifier|
         if length != 0
-          if local_file[0...length] != local_path
+          if local_file[0...length] != @options['local_path']
             next
           else
             remote_file = local_file[length..-1]
@@ -323,7 +323,7 @@ services.each do |uri, options|
   else
     length = 0
   end
-
+  options['local_path'] = local_path
   options['length'] = length
 
   begin
