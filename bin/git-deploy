@@ -175,6 +175,7 @@ module Git
       if @options['revision'] == remote_revision
         if @options['ignore_if_same_revision']
           puts "Same revision, ignoring"
+
         else
           puts "Same revision, overwriting"
           remote_files = Git.diff_committed(@options['local_path'])
@@ -387,7 +388,7 @@ services.each do |uri, options|
   else
     length = 0
   end
-
+  options['local_path'] = local_path
   options['length'] = length
 
   service = case options['scheme']
