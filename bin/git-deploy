@@ -1,15 +1,19 @@
 #!/usr/bin/env ruby
   
-if ARGV[0].nil? || ARGV[0].empty?
 deploy = 'deploy.yml'
-else
-deploy = ARGV[0] + '.yml';
-end  
-  
+
 unless File.exists? deploy
   puts "File does not exist: " + deploy
   exit
 end                    
+
+
+if ARGV[0].nil? || ARGV[0].empty?
+  mode = 'default'
+else
+  mode = ARGV[0]
+end
+
 
 require 'rubygems'
 require 'timeout'
@@ -19,6 +23,7 @@ require 'net/ftp'
 require 'net/ssh'
 require 'net/sftp'
 require 'tempfile'
+require "ap"
 
 # Store the current revision
 revision = `git rev-parse HEAD`.chomp.strip
@@ -92,11 +97,12 @@ module Git
     end
   end
 
+
+
   class Service
     attr_reader :failures
 
-    def initialize(uri, options)
-      @uri = uri
+    def initialize(options)
       @host = options['host']
       @options = options
       @scheme = options['scheme']
@@ -214,52 +220,15 @@ module Git
     end
   end
 
-  class SFTP < Service
-    def initialize(uri, options)
-      super(uri, options)
-      @path = options['path'].empty? ? options['chdir'] : options['path']
-    end
 
-    def connect
-      puts "Connecting to #{@host}"
-      sftp_options = {}
-#      sftp_options[:verbose] = :debug
-      sftp_options[:port] = @uri.port if @uri.port
-      @sftp = Net::SFTP.start(@options['host'], @options['user'], sftp_options)
-    end
 
-    def disconnect
-#      @sftp.close!
-    end
 
-    def put(local_file, remote_file)
-      @sftp.upload!(local_file, "#{@path}/#{remote_file}")
-    end
-
-    def delete(remote_file)
-      @sftp.remove!("#{@remote_file}")
-    end
-
-    def get_remote_revision
-      begin
-        @sftp.file.open("#{@path}/REVISION", "r") do |f|
-          remote_revision = f.gets
-        end
-
-        puts "Remote Revision: #{remote_revision}"
-      rescue Net::SFTP::StatusException => e
-        raise e unless e.code == 2 && e.description == "no such file"
-        remote_revision = revision
-      end
-      remote_revision
-    end
-  end
 
   class FTP < Service
-    def initialize(uri, options)
-      super(uri, options)
+    def initialize(options)
+      super(options)
       @remote_directories = {}
-      @port = options['port'] || uri.port || 21
+      @port = options['port'] || 21
     end
 
     def connect
@@ -279,7 +248,13 @@ module Git
       @ftp.connect(@options['host'], @options['port'])
       @ftp.login(@options['user'], @options['password'])
 
-      @ftp.chdir(@options['path'].empty? ? @options['chdir'] : '/' + @options['path'])
+      # path is a string 
+      if @options['path'].class.to_s.eql?("String")
+        @ftp.chdir(@options['path'])
+      #path is a hash with different paths - get correct path from mode
+      else
+        @ftp.chdir(@options['path'][@options['mode']])
+      end
     end
 
     def disconnect
@@ -348,23 +323,21 @@ module Git
         end
       end
     end
-  end
+  end # FTP < Service
 end
 
-services.each do |uri, options|
+
+
+services.each do |server, options|
   next if options['skip']
 
-  puts uri
-  uri = URI.parse(uri)
+  next if mode != "default" && options['path'][mode].nil?
+
+  puts server
 
   options['revision'] = revision
-  options['revision_file' ] = revision_file
-  options['scheme']   = uri.scheme   if uri.scheme
-  options['user']     = uri.user     if uri.user
-  options['password'] = uri.password if uri.password
-  options['host']     = uri.host     if uri.host
-  options['port']     = uri.port     if uri.port
-  options['path']     = uri.path     if uri.path
+  options['revision_file'] = revision_file
+  options['mode'] = mode
   options.merge!(settings)
 
   pwd = Dir.pwd
@@ -392,19 +365,18 @@ services.each do |uri, options|
   options['length'] = length
 
   service = case options['scheme']
-  when 'sftp' then Git::SFTP.new(uri, options)
-  when 'ftp'  then Git::FTP.new(uri, options)
+  when 'ftp'  then Git::FTP.new(options)
   end
   unless service.automate
-    service_failures[uri] = service.failures
+    service_failures[server] = service.failures
   end
 end
 
 unless service_failures.empty?
   puts "Failures"
-  service_failures.each do |uri, failures|
+  service_failures.each do |server, failures|
     failures.each do |failure|
-      puts "#{uri}: #{failure.class} #{failure}"
+      puts "#{server}: #{failure.class} #{failure}"
     end
   end
 end
