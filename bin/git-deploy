@@ -50,6 +50,7 @@ module Git
     # We figure out only which files need updating
     # so don't upload duplicate files
     def diff_committed(local_path, revision = nil)
+      
       remote_files = {}
       if revision
         command = "git diff --name-status #{revision} -- #{local_path}"
@@ -126,7 +127,9 @@ module Git
             puts "Uploading Maintenance file"
             @ftp.put(@options['maintenance_file'], @options['maintenance_deploy_to'])
           end
+          
           self.upload
+          
           if upload_maintenance_file
             puts "Removing Maintenance file"
             @ftp.put(@options['maintenance_deploy_to'], @options['maintenance_deploy_to'])
@@ -163,16 +166,12 @@ module Git
     end
 
     def diff
-      if @remote_files.is_a? Hash
-        return @remote_files
-      end
-
       # Decide upload strategy
-      if ARGV[0] == 'diff' || ARGV[0] == 'd'
-        @remote_files = Git.diff_uncommitted(@options['local_path'])
-      else
+      #if ARGV[0] == 'diff' || ARGV[0] == 'd'
+      #  @remote_files = Git.diff_uncommitted(@options['local_path'])
+      #else
         @remote_files = self.diff_committed
-      end
+      #end
     end
 
     def diff_committed
@@ -187,12 +186,14 @@ module Git
           remote_files = Git.diff_committed(@options['local_path'])
         end
       else
+        puts "different revisions, overwriting"
         remote_files = Git.diff_committed(@options['local_path'], "#{remote_revision}...HEAD")
       end
     end
 
     def upload
       length = @options['length']
+      
       @remote_files.each do |local_file, modifier|
         if length != 0
           if local_file[0...length] != @options['local_path']
@@ -222,8 +223,6 @@ module Git
 
 
 
-
-
   class FTP < Service
     def initialize(options)
       super(options)
@@ -250,9 +249,11 @@ module Git
 
       # path is a string 
       if @options['path'].class.to_s.eql?("String")
+        p "changing dit to: "+@options['path'].to_s
         @ftp.chdir(@options['path'])
       #path is a hash with different paths - get correct path from mode
       else
+        p "changing dir to: "+@options['path'][@options['mode']].to_s
         @ftp.chdir(@options['path'][@options['mode']])
       end
     end
