@@ -1,0 +1,16 @@
+'settings':
+  ignore_if_same_revision: false
+
+
+'main_server':
+  skip: false
+  passive: true
+  scheme: ftp
+  user: username
+  password: password
+  host: ftp.server.com
+  port: 21
+  path: 
+    default: /www/
+    beta: /beta/
+  ignore: [deploy.yml, config.ini, libs/]
