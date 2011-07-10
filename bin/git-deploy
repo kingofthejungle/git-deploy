@@ -1,5 +1,14 @@
 #!/usr/bin/env ruby
   
+
+#
+# based on great work of Aizat Faiz
+# https://github.com/aizatto/git-deploy
+#
+# imporved by Michal Svec, 2011
+# https://github.com/kingofthejungle/git-deploy
+#
+
 deploy = 'deploy.yml'
 
 unless File.exists? deploy
@@ -7,7 +16,7 @@ unless File.exists? deploy
   exit
 end                    
 
-
+# 
 if ARGV[0].nil? || ARGV[0].empty?
   mode = 'default'
 else
@@ -20,10 +29,8 @@ require 'timeout'
 require 'yaml'
 require 'uri'
 require 'net/ftp'
-require 'net/ssh'
-require 'net/sftp'
 require 'tempfile'
-require "ap"
+
 
 # Store the current revision
 revision = `git rev-parse HEAD`.chomp.strip
@@ -166,12 +173,7 @@ module Git
     end
 
     def diff
-      # Decide upload strategy
-      #if ARGV[0] == 'diff' || ARGV[0] == 'd'
-      #  @remote_files = Git.diff_uncommitted(@options['local_path'])
-      #else
         @remote_files = self.diff_committed
-      #end
     end
 
     def diff_committed
@@ -195,6 +197,7 @@ module Git
       length = @options['length']
       
       @remote_files.each do |local_file, modifier|
+
         if length != 0
           if local_file[0...length] != @options['local_path']
             next
@@ -206,13 +209,30 @@ module Git
         end
 
         case modifier
-        when 'A', 'M', 'C'
-          puts "Uploading #{local_file}"
-          self.put(local_file, remote_file)
-        when 'D'
-          puts "Deleting #{local_file}"
-          self.delete(remote_file)
+          when 'A', 'M', 'C'
+            if @options['ignore']
+              # do not upload file if it's mentioned in ignore section in config file
+              ignore = false
+              @options['ignore'].each { |ignored|
+                if local_file.match(ignored) != nil
+                  ignore = true 
+                  break
+                end
+              }
+
+              if ignore
+                puts "\tIgnoring #{local_file}"  
+                next
+              end
+            end
+
+            puts "\tUploading #{local_file}"
+            self.put(local_file, remote_file)
+          when 'D'
+            puts "Deleting #{local_file}"
+            self.delete(remote_file)
         end
+
         @remote_files.delete(local_file)
       end
 
@@ -249,11 +269,11 @@ module Git
 
       # path is a string 
       if @options['path'].class.to_s.eql?("String")
-        p "changing dit to: "+@options['path'].to_s
+        puts "changing dir to: "+@options['path'].to_s
         @ftp.chdir(@options['path'])
-      #path is a hash with different paths - get correct path from mode
+      #path is a hash with more paths - get correct path from mode (cli argument)
       else
-        p "changing dir to: "+@options['path'][@options['mode']].to_s
+        puts "changing dir to: "+@options['path'][@options['mode']].to_s
         @ftp.chdir(@options['path'][@options['mode']])
       end
     end
@@ -334,7 +354,7 @@ services.each do |server, options|
 
   next if mode != "default" && options['path'][mode].nil?
 
-  puts server
+  puts "current server: "+server
 
   options['revision'] = revision
   options['revision_file'] = revision_file
@@ -366,8 +386,9 @@ services.each do |server, options|
   options['length'] = length
 
   service = case options['scheme']
-  when 'ftp'  then Git::FTP.new(options)
+    when 'ftp'  then Git::FTP.new(options)
   end
+
   unless service.automate
     service_failures[server] = service.failures
   end

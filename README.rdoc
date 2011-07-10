@@ -12,10 +12,10 @@ when doing a deployment, I only need to upload the files that have been changed.
 
 I needed something like Capistrano, but simpler.
 
-git-deploy supports deployment over SSH and FTP.
+git-deploy supports deployment over FTP.
 
 
-*This fork comes with some changes for my workflow. I changed format of configuration file to be able to choose
+* This fork comes with some changes for my workflow. I changed format of configuration file to be able to choose
 upload directory on the same server as a parameter. It is very useful when one wants to test the implementation 
 in directory with beta version of the system. In my case there is second subdomain with beta version.*
 
@@ -62,10 +62,11 @@ In case of using beta testing directory, extend config like this:
 	  path: 
 	    default: /www/
 	    beta: /beta/
-	  ignore:
-	    dodavatel/
+	  ignore: [ignored/, deploy.yml, .htaccess]
 
 Note: The port field is optional
+
+Ignored files and directories are in form of array. If the file name contains string from ignored array, it is not uploaded. It can be in local repository, but won't be uploaded to the server. Typical example of ignored file is <code>deploy.yml</code> 
 
 Once you have done creating the <code>deploy.yml</code>, upload to your server a file called +REVISION+ with the revision string for the current revision residing on the server
 
