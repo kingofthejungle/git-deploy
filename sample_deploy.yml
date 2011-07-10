@@ -10,6 +10,8 @@
   password: password
   host: ftp.server.com
   port: 21
+  maintenance_file: maintenance.txt
+  maintenance_deploy_to: maintenance
   path: 
     default: /www/
     beta: /beta/
