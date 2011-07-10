@@ -49,20 +49,20 @@ In this case script will use same path to script and there is no need for the se
 
 In case of using beta testing directory, extend config like this:
 
-	'settings':
+  'settings':
     ignore_if_same_revision: true
 
-	'server1':
-	  skip: false
-	  scheme: ftp
-	  user: example
-	  password: password
-	  host: example.com
-	  port: 21
-	  path: 
-	    default: /www/
-	    beta: /beta/
-	  ignore: [ignored/, deploy.yml, .htaccess]
+  'server1':
+    skip: false
+    scheme: ftp
+    user: example
+    password: password
+    host: example.com
+    port: 21
+    path: 
+      default: /www/
+      beta: /beta/
+    ignore: [ignored/, deploy.yml, .htaccess]
 
 Note: The port field is optional
 
